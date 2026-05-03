@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ADAM - IA de Partículas</title>
+    <style>
+        body { margin: 0; background: #050010; color: #bf80ff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        canvas { flex-grow: 1; }
+        
+        #chat-area { position: absolute; top: 20px; left: 20px; width: 300px; pointer-events: none; }
+        .msg { background: rgba(106, 0, 255, 0.1); padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #6a00ff; }
+
+        #barra-input { background: #0a0020; padding: 20px; border-top: 2px solid #6a00ff; display: flex; gap: 10px; }
+        input { flex-grow: 1; padding: 12px; border-radius: 25px; border: 1px solid #6a00ff; background: #000; color: white; outline: none; }
+        button { padding: 10px 25px; border-radius: 25px; border: none; background: #6a00ff; color: white; cursor: pointer; font-weight: bold; }
+        button:hover { background: #8833ff; }
+    </style>
+</head>
+<body>
+
+    <div id="chat-area">
+        <div class="msg">ADAM: [FELICIDADE] Sistema online. Aguardando sua pergunta...</div>
+    </div>
+
+    <canvas id="canvasAdam"></canvas>
+
+    <div id="barra-input">
+        <input type="text" id="campo-pergunta" placeholder="Pergunte algo ao Adam...">
+        <button onclick="enviar()">Enviar</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvasAdam');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particles = [];
+
+        class Particle {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.size = Math.random() * 4 + 1;
+                this.speedX = Math.random() * 4 - 2;
+                this.speedY = Math.random() * 4 - 2;
+                this.color = '#9933ff';
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.size > 0.1) this.size -= 0.05;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(5, 0, 16, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Círculo Central
+            ctx.shadowBlur = 30; ctx.shadowColor = '#6a00ff';
+            ctx.fillStyle = '#6a00ff';
+            ctx.beginPath(); ctx.arc(canvas.width/2, canvas.height/2, 50, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            if (particles.length < 100) particles.push(new Particle());
+            particles.forEach((p, i) => {
+                p.update(); p.draw();
+                if (p.size <= 0.1) particles.splice(i, 1);
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        async function enviar() {
+            const input = document.getElementById('campo-pergunta');
+            const texto = input.value;
+            if(!texto) return;
+
+            const res = await fetch('/perguntar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({pergunta: texto})
+            });
+            const dados = await res.json();
+            
+            const chatArea = document.getElementById('chat-area');
+            chatArea.innerHTML += `<div class="msg">Você: ${texto}</div>`;
+            chatArea.innerHTML += `<div class="msg" style="color:#bf80ff">ADAM: ${dados.resposta}</div>`;
+            input.value = '';
+        }
+    </script>
+</body>
+</html>
